@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -45,7 +46,6 @@ func getOrCreateRoom(roomID string) *Room {
 	return room
 }
 
-// Change...
 func (r *Room) startGame(roomID string, rounds uint8) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -134,6 +134,15 @@ func (r *Room) serveNextRound() {
 	// Broadcast the updated stories to all users in the room
 	r.broadcast("New round started", nil)
 
+	jsonPromptMap, err := json.Marshal(promptMap)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// Broadcast JSON promptMap to all connected users
+	r.broadcast(string(jsonPromptMap), nil)
+
 }
 
 func (r *Room) broadcast(message string, sender *websocket.Conn) {
@@ -150,6 +159,7 @@ func (r *Room) broadcast(message string, sender *websocket.Conn) {
 	}
 }
 
+// Redundant!!!!!!
 func (r *Room) enterStoryLine(storyStarter string, line string, sender *websocket.Conn) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -172,4 +182,4 @@ func (r *Room) enterStoryLine(storyStarter string, line string, sender *websocke
 // Can simply use the broadcast function for that no worries - moment all submitted are true (make a check everytime one goes true)
 //call the function to serve new lines - (gotta do in the frontend...)
 
-//Combine all to a flow that utilizes rounds and
+//Combine all to a flow and get frontend
