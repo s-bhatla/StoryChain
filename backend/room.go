@@ -20,7 +20,8 @@ type StoryLine struct {
 type Room struct {
 	mu          sync.Mutex
 	connections map[*websocket.Conn]string
-	rounds      uint8
+	maxrounds   uint8
+	round       uint8
 	// "Stories" must be change everytime a user disconnects as well
 	Stories map[string][]StoryLine //username storystarter mapped to array of complete story (which will be appended every round)
 	//Userlist must be changed everytime user disconnects
@@ -46,15 +47,14 @@ func getOrCreateRoom(roomID string) *Room {
 	return room
 }
 
-func (r *Room) startGame(roomID string, rounds uint8) {
+func (r *Room) startGame(maxrounds uint8) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	//When all the players are in the room and the game is to be started.
-	//Shuffle the userlist for serving random
 
 	//set rounds of the room
-	r.rounds = rounds
+	r.maxrounds = maxrounds
 
 	//Change this to add the null or sth
 	for _, user := range r.userlist {
@@ -63,6 +63,7 @@ func (r *Room) startGame(roomID string, rounds uint8) {
 		r.Stories[user] = append(r.Stories[user], newStoryline)
 	}
 	//Just send it to frontend and get the stories responses
+	r.round = 1
 	r.broadcast("Game started", nil)
 }
 
@@ -84,6 +85,12 @@ func (r *Room) removeConnection(conn *websocket.Conn) {
 	defer r.mu.Unlock()
 
 	delete(r.connections, conn)
+
+	// Check if the game should end due to disconnection
+	if len(r.connections) < len(r.Stories) {
+		r.broadcast("Error: Game ended due to player disconnection", nil)
+		r.endGame()
+	}
 }
 
 func (r *Room) serveNextRound() {
@@ -157,25 +164,6 @@ func (r *Room) broadcast(message string, sender *websocket.Conn) {
 			}
 		}
 	}
-}
-
-// Redundant!!!!!!
-func (r *Room) enterStoryLine(storyStarter string, line string, sender *websocket.Conn) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Find the existing storyline element
-	for i, storyline := range r.Stories[storyStarter] {
-		if storyline.user == r.connections[sender] && storyline.story == "" {
-			// Update the story part of the existing storyline element
-			r.Stories[storyStarter][i].story = line
-			return
-		}
-	}
-
-	// If no existing storyline element is found, create a new one
-	newStoryLine := StoryLine{user: r.connections[sender], story: line}
-	r.Stories[storyStarter] = append(r.Stories[storyStarter], newStoryLine)
 }
 
 // and that realtime updation shi (submitted/not submitted tick feature) on submitted (POST req) add onto handleSubmitStory......

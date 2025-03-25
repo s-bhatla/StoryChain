@@ -24,6 +24,8 @@ func main() {
 
 	app.Get("/ws/:roomID", websocket.New(handleWebSocket))
 
+	app.Get("/startGame/:roomID/:maxrounds", handleStartGame)
+
 	app.Post("/submitline/:roomID", handleSubmitStory)
 
 	app.Get("/getNextPrompt/:roomID", getNextPrompt)

@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 )
@@ -23,6 +25,7 @@ func getStory(c *fiber.Ctx) error {
 	roomID := c.Params("roomID")
 
 	if room, exists := rooms[roomID]; exists {
+		defer room.endGame()
 		return c.Status(fiber.StatusOK).JSON(room.Stories)
 	} else {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -103,6 +106,24 @@ type storyContribution struct {
 	Message  string `json:"message"`
 }
 
+func handleStartGame(c *fiber.Ctx) error {
+	roomID := c.Params("roomID")
+	maxrounds := c.Params("maxrounds")
+
+	val, err := strconv.ParseUint(maxrounds, 10, 8)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": err,
+		})
+	}
+	maxroundint := uint8(val)
+
+	getOrCreateRoom(roomID).startGame(maxroundint)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Game started",
+	})
+}
+
 func getNextPrompt(ctx *fiber.Ctx) error {
 	//get the username
 	//Call the fxn in the room, (to be written)
@@ -133,9 +154,40 @@ func handleSubmitStory(ctx *fiber.Ctx) error {
 		}
 	}
 
+	//Add check if all users have submitted story, if not, then dont call servenext round
+	callflag := true
+	for _, value := range room.Stories {
+		for _, storyline := range value {
+			if storyline.story == "" {
+				callflag = false
+				break
+			}
+		}
+		if !callflag {
+			break
+		}
+	}
+
+	//Add check if number of rounds == maxRounds, then return roundsdone, and let frontend call getallstories
+	if room.round == room.maxrounds && callflag {
+		return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
+			"message": "Rounds completed",
+			"data":    "",
+		})
+	}
+
+	if callflag {
+		room.serveNextRound()
+	}
 	// Respond with the parsed data
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "Message received successfully",
 		"data":    request,
 	})
+}
+
+func (r *Room) endGame() {
+	// Clean up game state
+	r.Stories = make(map[string][]StoryLine)
+	r.round = 0
 }
