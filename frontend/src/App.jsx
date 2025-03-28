@@ -20,3 +20,9 @@ function App() {
 
 
 export default App
+
+
+//CHANGE Chatroom:
+// 1) Game start, read broadcasts for storylines, next prompts, submit prompts
+// 1.5) Add time functionality (no backend security for now, just make it)
+// 2) Redirect to results page after game has ended
