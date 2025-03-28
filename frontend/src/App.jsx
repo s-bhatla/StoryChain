@@ -12,6 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/room/:roomID" element={<Chatroom />} />
+        <Route path="/results/:roomID" component={Results} />
       </Routes>
     </BrowserRouter>
   );

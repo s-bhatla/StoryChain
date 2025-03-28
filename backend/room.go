@@ -22,8 +22,7 @@ type Room struct {
 	connections map[*websocket.Conn]string
 	maxrounds   uint8
 	round       uint8
-	// "Stories" must be change everytime a user disconnects as well
-	Stories map[string][]StoryLine //username storystarter mapped to array of complete story (which will be appended every round)
+	Stories     map[string][]StoryLine //username storystarter mapped to array of complete story (which will be appended every round)
 	//Userlist must be changed everytime user disconnects
 	userlist []string //usernames list
 }
